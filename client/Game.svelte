@@ -8,12 +8,12 @@
   let container;
   let visualizer;
 
-  let game;
+  let state;
   const unsubscribe = store.subscribe(v => {
     // console.log('[*] Game: Store changed', v);
-    game = v.game;
+    state = v;
     if (visualizer) {
-      visualizer.render(game, v.latency);
+      visualizer.render(v.game, v.latency);
     }
   });
 
@@ -86,10 +86,11 @@
 </style>
 
 <div class="flex">
-  <div class="flex-1" bind:this={container} />
   <div class="flex-1">
-    <pre>{JSON.stringify(game, null, 2)}</pre>
+    <div bind:this={container} />
+    <button on:click={handleBack}>Back</button>
+  </div>
+  <div class="flex-1">
+    <pre>{JSON.stringify(state, null, 2)}</pre>
   </div>
 </div>
-
-<button on:click={handleBack}>Back</button>

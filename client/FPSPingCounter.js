@@ -10,16 +10,16 @@ export default class FPSCounter extends PIXI.Container {
     this.timeValues = [];
     this.lastTime = Date.now();
 
-    this.fpsTextField = new PIXI.Text(`FPS: 0\nPING: 0`, {
+    this.counterText = new PIXI.Text(`FPS: 0\nPING: 0`, {
       fill: 0xff0000,
       fontSize: 24,
       align: 'right'
     });
-    this.fpstTicker = new PIXI.Ticker();
-    this.fpstTicker.add(this.measureFps.bind(this));
-    this.fpstTicker.start();
+    this.addChild(this.counterText);
 
-    this.addChild(this.fpsTextField);
+    this.ticker = new PIXI.Ticker();
+    this.ticker.add(this.measureFps.bind(this));
+    this.ticker.start();
   }
 
   measureFps() {
@@ -44,6 +44,6 @@ export default class FPSCounter extends PIXI.Container {
   }
 
   updateText() {
-    this.fpsTextField.text = `FPS: ${this.fps}\nPING: ${this.ping}`;
+    this.counterText.text = `FPS: ${this.fps}\nPING: ${this.ping}`;
   }
 }
