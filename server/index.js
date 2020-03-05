@@ -59,11 +59,10 @@ wss.on('connection', function(ws) {
           name: player.name,
           scene: 'games',
           games: Object.values(games).map(game => ({
-            ...game,
+            id: game.id,
             players: game.players.map(player => player.name)
           }))
         };
-        console.log(payload);
         ws.send(
           JSON.stringify({
             type: 'update',
@@ -94,7 +93,7 @@ wss.on('connection', function(ws) {
                 payload: {
                   scene: 'games',
                   games: Object.values(games).map(game => ({
-                    ...game,
+                    id: game.id,
                     players: game.players.map(player => player.name)
                   }))
                 }
@@ -129,7 +128,7 @@ wss.on('connection', function(ws) {
           if (p.scene === 'games') {
             const payload = {
               games: Object.values(games).map(game => ({
-                ...game,
+                id: game.id,
                 players: game.players.map(player => player.name)
               }))
             };
@@ -153,9 +152,22 @@ wss.on('connection', function(ws) {
 
         if (gameToJoin.players.length < 2) {
           gameToJoin.players.push(player);
-
-          players.scene = 'game';
+          player.scene = 'game';
           player.game = gameToJoin;
+
+          for (const p of Object.values(players)) {
+            p.ws.send(
+              JSON.stringify({
+                type: 'update',
+                payload: {
+                  games: Object.values(games).map(game => ({
+                    id: game.id,
+                    players: game.players.map(player => player.name)
+                  }))
+                }
+              })
+            );
+          }
 
           player.ws.send(
             JSON.stringify({
@@ -202,6 +214,38 @@ wss.on('connection', function(ws) {
 
   ws.on('close', function() {
     delete players[player.id];
+
+    if (player.game) {
+      const gameId = player.game.id;
+
+      for (p of player.game.players) {
+        delete p.game;
+        p.scene = 'games';
+      }
+
+      if (games[gameId].interval) {
+        clearInterval(games[gameId].interval);
+      }
+      delete games[gameId];
+    }
+
+    for (p of Object.values(players)) {
+      if (p.scene === 'games') {
+        p.ws.send(
+          JSON.stringify({
+            type: 'update',
+            payload: {
+              scene: 'games',
+              games: Object.values(games).map(game => ({
+                id: game.id,
+                players: game.players.map(player => player.name)
+              }))
+            }
+          })
+        );
+      }
+    }
+
     console.log(
       `[-] Disconnecting ${player.id}`,
       Object.values(players).map(({ ws, ...p }) => p)

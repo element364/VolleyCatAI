@@ -37,7 +37,11 @@ ws.onmessage = function(message) {
   // console.log('[+] Received', action);
   switch (action.type) {
     case 'update':
-      store.update(v => ({ ...v, ...action.payload }));
+      store.update(v => ({
+        ...v,
+        ...action.payload,
+        ...(action.payload.scene === 'games' && { game: {} })
+      }));
   }
   // visualizer.render(state);
 };
