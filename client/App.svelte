@@ -9,7 +9,7 @@
 
   let s;
   const unsubscribe = store.subscribe(v => {
-    console.log('[*] App: Store changed', v);
+    // console.log('[*] App: Store changed', v);
     s = v;
   });
 

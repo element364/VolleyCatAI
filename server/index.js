@@ -34,12 +34,19 @@ wss.on('connection', function(ws) {
   );
 
   ws.on('message', function(message) {
+    if (message === 'latency-ping') {
+      return ws.send('latency-pong');
+    }
+
     let action = {};
     try {
       action = JSON.parse(message);
     } catch (err) {
       console.error('Wrong message', message);
     }
+
+    console.log(action);
+
     switch (action.type) {
       case 'set_name':
         player.name = action.payload;
@@ -162,7 +169,8 @@ wss.on('connection', function(ws) {
                     payload: {
                       game: {
                         ...gameToJoin,
-                        players: gameToJoin.players.map(p => p.name)
+                        players: gameToJoin.players.map(p => p.name),
+                        interval: undefined
                       }
                     }
                   })

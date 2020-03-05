@@ -11,16 +11,28 @@ const store = writable({
   name: '',
   game: {},
   games: [],
+  latency: 0,
   input
 });
 
 const ws = new WebSocket(`ws://${location.host}`);
 
+let startTime;
+let pingInterval;
+
 ws.onopen = function(...args) {
-  console.log('Socket openned', args);
+  setInterval(() => {
+    startTime = Date.now();
+    ws.send('latency-ping');
+  }, 2000);
 };
 
 ws.onmessage = function(message) {
+  if (message.data === 'latency-pong') {
+    const latency = Date.now() - startTime;
+    return store.update(v => ({ ...v, latency }));
+  }
+
   const action = JSON.parse(message.data);
   // console.log('[+] Received', action);
   switch (action.type) {
@@ -31,6 +43,7 @@ ws.onmessage = function(message) {
 };
 
 ws.onclose = function(...args) {
+  clearInterval(pingInterval);
   console.log('Socket closed', args);
 };
 

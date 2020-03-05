@@ -7,7 +7,7 @@
 
   let s;
   const unsubscribe = store.subscribe(v => {
-    console.log('[*] Games: Store changed', v);
+    // console.log('[*] Games: Store changed', v);
     s = v;
   });
 
@@ -22,7 +22,6 @@
   }
 
   function handleJoinGame() {
-    console.log('handleConnect', selectedGameId);
     joinGame(selectedGameId);
   }
 

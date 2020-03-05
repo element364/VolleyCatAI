@@ -10,10 +10,10 @@
 
   let game;
   const unsubscribe = store.subscribe(v => {
-    console.log('[*] Game: Store changed', v);
+    // console.log('[*] Game: Store changed', v);
     game = v.game;
     if (visualizer) {
-      visualizer.render(game);
+      visualizer.render(game, v.latency);
     }
   });
 
@@ -51,11 +51,16 @@
     }
   }
 
+  function onBlur() {
+    updateInput({ left: 0, up: 0, right: 0 });
+  }
+
   $: if (container) {
     visualizer = new Visualizer(container, { WIDTH, HEIGHT });
 
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
   }
 
   function handleBack() {
@@ -66,6 +71,7 @@
     unsubscribe();
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('keyup', onKeyUp);
+    window.removeEventListener('blur', onBlur);
   });
 </script>
 
