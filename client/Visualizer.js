@@ -1,5 +1,7 @@
 import * as PIXI from 'pixi.js';
 
+import FPSPingCounter from './FPSPingCounter';
+
 import {
   HEIGHT,
   BALL_RADIUS,
@@ -23,7 +25,6 @@ export default class Visualzer {
     this.app.renderer.backgroundColor = 0xaaaaaa;
     this.app.view.style.width = '600px';
     this.app.view.style.height = '400px';
-    this.graphics = new PIXI.Graphics();
 
     this.text = new PIXI.Text('Score: 0 : 0\nHit count: 0 : 0', {
       fill: 0x000000,
@@ -31,7 +32,12 @@ export default class Visualzer {
     });
     this.app.stage.addChild(this.text);
 
+    this.graphics = new PIXI.Graphics();
     this.app.stage.addChild(this.graphics);
+
+    this.fpsPingCounter = new FPSPingCounter();
+    this.fpsPingCounter.x = WIDTH - 150;
+    this.app.stage.addChild(this.fpsPingCounter);
 
     while (dom.firstChild) {
       dom.removeChild(dom.firstChild);
@@ -39,16 +45,18 @@ export default class Visualzer {
     dom.appendChild(this.app.view);
   }
 
-  render(state) {
+  render(state, latency) {
     if (!state.leftPlayer || !state.rightPlayer) {
       return;
     }
 
-    console.log(`[+] Rendering ${state.id}`);
-
     this.graphics.clear();
 
     this.text.text = `Score ${state.leftPlayer.score} : ${state.rightPlayer.score}\nHit count: ${state.leftPlayer.hitCount} : ${state.rightPlayer.hitCount}`;
+
+    if (latency) {
+      this.fpsPingCounter.ping = latency || 0;
+    }
 
     // Blue blobby
     this.graphics.beginFill(0x0000ff);
