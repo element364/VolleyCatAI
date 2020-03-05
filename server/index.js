@@ -127,16 +127,22 @@ wss.on('connection', function(ws) {
         games[game.id] = game;
         for (const p of Object.values(players)) {
           if (p.scene === 'games') {
+            const payload = {
+              games: Object.values(games).map(game => ({
+                ...game,
+                players: game.players.map(player => player.name)
+              }))
+            };
+
+            if (p.id === player.id) {
+              player.scene = 'game';
+              payload.scene = 'game';
+            }
+
             p.ws.send(
               JSON.stringify({
                 type: 'update',
-                payload: {
-                  games: Object.values(games).map(game => ({
-                    ...game,
-                    players: game.players.map(player => player.name)
-                  })),
-                  ...(p.id === player.id && { scene: 'game' })
-                }
+                payload
               })
             );
           }
@@ -147,6 +153,8 @@ wss.on('connection', function(ws) {
 
         if (gameToJoin.players.length < 2) {
           gameToJoin.players.push(player);
+
+          players.scene = 'game';
           player.game = gameToJoin;
 
           player.ws.send(
