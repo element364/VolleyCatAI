@@ -3,9 +3,9 @@ const { createServer } = require('http');
 
 const express = require('express');
 const WebSocket = require('ws');
-const nanoid = require('nanoid');
 
-const { getInitialState, getNextState } = require('./physics');
+const Player = require('./Player');
+const Game = require('./Game');
 
 const app = express();
 app.use(express.static(path.resolve(__dirname, '..', 'dist')));
@@ -20,12 +20,7 @@ const games = {};
 const players = {};
 
 wss.on('connection', function(ws) {
-  const player = {
-    id: nanoid(),
-    name: '',
-    scene: '',
-    ws
-  };
+  const player = new Player(ws);
   players[player.id] = player;
 
   console.log(
@@ -34,8 +29,8 @@ wss.on('connection', function(ws) {
   );
 
   ws.on('message', function(message) {
-    if (message === 'latency-ping') {
-      return ws.send('latency-pong');
+    if (message === 'pingcheck') {
+      return ws.send('pongcheck');
     }
 
     let action = {};
@@ -49,65 +44,43 @@ wss.on('connection', function(ws) {
 
     switch (action.type) {
       case 'set_name':
-        player.name = action.payload;
-        player.scene = 'games';
-        console.log(
-          `[*] Setting player ${player.id} name to ${action.payload}`,
-          Object.values(players).map(({ ws, ...p }) => p)
-        );
-        const payload = {
-          name: player.name,
+        player.update({
+          name: action.payload,
           scene: 'games',
           games: Object.values(games).map(game => ({
             id: game.id,
             players: game.players.map(player => player.name)
           }))
-        };
-        ws.send(
-          JSON.stringify({
-            type: 'update',
-            payload
-          })
-        );
+        });
         break;
       case 'view_games':
         if (player.game) {
-          const gameId = player.game.id;
+          // Player disconnected
+          player.game.stop();
+          // const gameId = player.game.id;
 
-          for (p of player.game.players) {
-            delete p.game;
-            p.scene = 'games';
-          }
+          // for (p of player.game.players) {
+          //   delete p.game;
+          //   p.scene = 'games';
+          // }
 
-          if (games[gameId].interval) {
-            clearInterval(games[gameId].interval);
-          }
-          delete games[gameId];
+          // if (games[gameId].interval) {
+          //   clearInterval(games[gameId].interval);
+          // }
+          // delete games[gameId];
         }
 
-        for (p of Object.values(players)) {
-          if (p.scene === 'games') {
-            p.ws.send(
-              JSON.stringify({
-                type: 'update',
-                payload: {
-                  scene: 'games',
-                  games: Object.values(games).map(game => ({
-                    id: game.id,
-                    players: game.players.map(player => player.name)
-                  }))
-                }
-              })
-            );
-          }
-        }
+        player.update({
+          scene: 'games',
+          games: Object.values(games).map(game => ({
+            id: game.id,
+            players: game.players.map(player => player.name)
+          }))
+        });
         break;
       case 'create_game':
-        const playerGame = Object.values(games).find(game =>
-          game.players.find(p => p.id === player.id)
-        );
-        if (playerGame) {
-          console.log(`Player ${player.id} already in game ${playerGame.id}`);
+        if (player.game) {
+          console.log(`Player ${player.id} already in game ${player.game.id}`);
           return;
         }
 
@@ -116,14 +89,9 @@ wss.on('connection', function(ws) {
           Object.values(players).map(({ name, scene }) => ({ name, scene }))
         );
 
-        const game = {
-          id: nanoid(),
-          ...getInitialState(),
-          players: [player]
-        };
-        player.game = game;
-
+        const game = new Game(player);
         games[game.id] = game;
+
         for (const p of Object.values(players)) {
           if (p.scene === 'games') {
             const payload = {
@@ -134,16 +102,10 @@ wss.on('connection', function(ws) {
             };
 
             if (p.id === player.id) {
-              player.scene = 'game';
               payload.scene = 'game';
             }
 
-            p.ws.send(
-              JSON.stringify({
-                type: 'update',
-                payload
-              })
-            );
+            p.update(payload);
           }
         }
         break;
@@ -151,62 +113,17 @@ wss.on('connection', function(ws) {
         let gameToJoin = games[action.payload];
 
         if (gameToJoin.players.length < 2) {
-          gameToJoin.players.push(player);
-          player.scene = 'game';
-          player.game = gameToJoin;
-
-          for (const p of Object.values(players)) {
-            p.ws.send(
-              JSON.stringify({
-                type: 'update',
-                payload: {
-                  games: Object.values(games).map(game => ({
-                    id: game.id,
-                    players: game.players.map(player => player.name)
-                  }))
-                }
-              })
-            );
-          }
-
-          player.ws.send(
-            JSON.stringify({
-              type: 'update',
-              payload: {
-                scene: 'game'
-              }
-            })
-          );
-
-          gameToJoin.interval = setInterval(() => {
-            const nextState = getNextState(gameToJoin, gameToJoin.input);
-            if (true || JSON.stringify(nextState) !== JSON.stringify(game)) {
-              gameToJoin = nextState;
-              for (const p of gameToJoin.players) {
-                p.ws.send(
-                  JSON.stringify({
-                    type: 'update',
-                    payload: {
-                      game: {
-                        ...gameToJoin,
-                        players: gameToJoin.players.map(p => p.name),
-                        interval: undefined
-                      }
-                    }
-                  })
-                );
-              }
-            }
-          }, 1000 / 60);
+          player.join(gameToJoin);
+          gameToJoin.start();
         }
         break;
       case 'input':
-        if (player.game) {
-          player.game.input[
+        if (player.game && player.game.state) {
+          player.game.state[
             player.game.players[0].id === player.id
               ? 'leftPlayer'
               : 'rightPlayer'
-          ] = action.payload;
+          ].input = action.payload;
         }
         break;
     }

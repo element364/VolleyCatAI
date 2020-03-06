@@ -30,7 +30,8 @@ function getInitialState() {
       x: 200,
       y: GROUND_PLANE_HEIGHT,
       vX: 0,
-      vY: 0
+      vY: 0,
+      input: { left: 0, right: 0, up: 0 }
     },
     rightPlayer: {
       score: 0,
@@ -38,7 +39,12 @@ function getInitialState() {
       x: 600,
       y: GROUND_PLANE_HEIGHT,
       vX: 0,
-      vY: 0
+      vY: 0,
+      input: {
+        left: 0,
+        right: 0,
+        up: 0
+      }
     },
     ball: {
       x: 200,
@@ -46,24 +52,12 @@ function getInitialState() {
       vX: 0,
       vY: 0
     },
-    players: [],
-    input: {
-      leftPlayer: {
-        left: 0,
-        right: 0,
-        up: 0
-      },
-      rightPlayer: {
-        left: 0,
-        right: 0,
-        up: 0
-      }
-    }
+    players: []
   };
 }
 
-function nextPlayerState(state, actions, player) {
-  if (actions[player].up) {
+function nextPlayerState(state, player) {
+  if (state[player].input.up) {
     if (state[player].y >= GROUND_PLANE_HEIGHT) {
       state[player].vY = -BLOBBY_JUMP_ACCELERATION;
     }
@@ -71,8 +65,8 @@ function nextPlayerState(state, actions, player) {
     state[player].vY -= BLOBBY_JUMP_BUFFER;
   }
   state[player].vX =
-    (actions[player].right ? BLOBBY_SPEED : 0.0) -
-    (actions[player].left ? BLOBBY_SPEED : 0.0);
+    (state[player].input.right ? BLOBBY_SPEED : 0.0) -
+    (state[player].input.left ? BLOBBY_SPEED : 0.0);
 
   state[player].vY += GRAVITATION;
 
@@ -141,9 +135,9 @@ function playerBallCollision(state, player) {
   }
 }
 
-function getNextState(state, actions) {
-  nextPlayerState(state, actions, 'rightPlayer');
-  nextPlayerState(state, actions, 'leftPlayer');
+function getNextState(state) {
+  nextPlayerState(state, 'rightPlayer');
+  nextPlayerState(state, 'leftPlayer');
 
   if (state.isGameRunning) {
     state.ball.vY += BALL_GRAVITATION;

@@ -12,6 +12,7 @@
   ],
   "dependencies": {
     "express": "^4.17.1",
+    "fast-json-patch": "^3.0.0-1",
     "nanoid": "^2.1.11",
     "nodemon": "^2.0.2",
     "ws": "^7.2.1"

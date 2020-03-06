@@ -11,8 +11,7 @@ const store = writable({
   name: '',
   game: {},
   games: [],
-  latency: 0,
-  input
+  latency: 0
 });
 
 const ws = new WebSocket(`ws://${location.host}`);
@@ -20,21 +19,20 @@ const ws = new WebSocket(`ws://${location.host}`);
 let startTime;
 let pingInterval;
 
-ws.onopen = function(...args) {
-  setInterval(() => {
+ws.onopen = function() {
+  pingInterval = setInterval(() => {
     startTime = Date.now();
-    ws.send('latency-ping');
+    ws.send('pingcheck');
   }, 2000);
 };
 
 ws.onmessage = function(message) {
-  if (message.data === 'latency-pong') {
+  if (message.data === 'pongcheck') {
     const latency = Date.now() - startTime;
     return store.update(v => ({ ...v, latency }));
   }
 
   const action = JSON.parse(message.data);
-  // console.log('[+] Received', action);
   switch (action.type) {
     case 'update':
       store.update(v => ({
@@ -43,7 +41,6 @@ ws.onmessage = function(message) {
         ...(action.payload.scene === 'games' && { game: {} })
       }));
   }
-  // visualizer.render(state);
 };
 
 ws.onclose = function(...args) {
@@ -85,7 +82,6 @@ function updateInput(diff) {
 
   if (JSON.stringify(nextInput) !== JSON.stringify(input)) {
     input = nextInput;
-    store.update(v => ({ ...v, input }));
     ws.send(
       JSON.stringify({
         type: 'input',
